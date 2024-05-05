@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -81,7 +82,28 @@ func logDuration(w http.ResponseWriter, duration time.Duration) {
 	fmt.Fprintf(w, "Query took [%v ns] or [%v ms] or [%v s]\n", duration.Nanoseconds(), duration.Milliseconds(), duration.Seconds())
 }
 
+type NotFoundErr struct {
+	Code    int
+	Message string
+}
+
 func NotFoundHandler(w http.ResponseWriter, r *http.Request) {
+	notFoundErr := NotFoundErr{
+		Code:    http.StatusNotFound,
+		Message: "Not Found",
+	}
+
+	data := map[string]string{
+		fmt.Sprintf("%d", notFoundErr.Code): notFoundErr.Message,
+	}
+
+	json, err := json.Marshal(data)
+	if err != nil {
+		log.Println("Error marshaling JSON:", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusNotFound)
-	fmt.Fprintf(w, "404 - What are you looking for?")
+	w.Write(json)
 }
